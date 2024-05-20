@@ -26,6 +26,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "octopus": "git+http://github.com/opendsu/octopus.git"
+    "octopus": "git+http://github.com/opendsu/octopus.git",
+    "yargs": "^17.7.2"
   }
 }

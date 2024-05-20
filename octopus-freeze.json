@@ -1,4 +1,4 @@
-{ 
+{
     "workDir": ".",
     "dependencies": [
         {
@@ -257,6 +257,24 @@
                 {
                     "type": "execute",
                     "cmd": "node ./node_modules/octopus/scripts/setEnv --file=../../../env.json \"node ./bin/octopusRun.js postbuild\""
+                }
+            ]
+        },
+        {
+            "name": "demo-wallet_bind_to_demo-ssapp",
+            "src": "",
+            "actions": [
+                {
+                    "type": "execute",
+                    "cmd": "cd demo-ssapp && npm run build"
+                },
+                {
+                    "type": "copy",
+                    "src": "./demo-ssapp/seed",
+                    "target": "./apihub-root/demo-wallet/wallet-patch/seed",
+                    "options": {
+                        "overwrite": true
+                    }
                 }
             ]
         }

@@ -1,0 +1,3 @@
+    Update bundle file paths and streamline build process
+    
+    Revised the file paths for the PSK bundles in build and script files, switching from "opendsu-sdk/psknode/bundles" to "opendsu-sdk/builds/output".
