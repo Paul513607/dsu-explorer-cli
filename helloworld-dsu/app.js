@@ -20,7 +20,7 @@ const commands = {
     'create-dsu': createDSU,
     'create-file': createFile,
     'create-folder': createFolder,
-    'list': listContents,
+    'ls': listContents,
     'cat': readFile,
     'clear-keyssi': clearCurrentKeySSI,
     'create-new-dsu': createNewDSU,
@@ -31,6 +31,11 @@ const commands = {
     'write-file': writeFile,
     'rm': deleteFileOrFolder,
     'mv': renameFileOrFolder,
+    'add-file': addFile,
+    'add-files': addMultipleFiles,
+    'add-folder': addFolder,
+    'extract-file': extractFile,
+    'extract-folder': extractFolder,
     'help': showHelp,
     'exit': () => rl.close()
 };
@@ -416,6 +421,148 @@ function renameFileOrFolder() {
     });
 }
 
+function addFile() {
+    promptForKeySSI((keySSI) => {
+        rl.question('Enter file path (file system): ', (fsPath) => {
+            rl.question('Enter path (DSU): ', (dsuPath => {
+                resolver.loadDSU(keySSI, (err, dsuInstance) => {
+                    if (err) {
+                        console.error('Error loading DSU:', err);
+                        return prompt();
+                    }
+
+                    dsuInstance.addFile(fsPath, dsuPath, {}, (err) => {
+                        if (err) {
+                            console.error('Error adding file:', err);
+                            return prompt();
+                        }
+
+                        console.log('File added successfully.')
+                        prompt();
+                    });
+                });
+            }));
+        });
+    });
+}
+
+function promptAddFile(fsPathsArray, callback) {
+    rl.question('Enter file path (file system) - leave it empty to stop: ', (fsPath) => {
+        if (fsPath === '') {
+            return callback(fsPathsArray);
+        }
+        fsPathsArray.push(fsPath);
+        promptAddFile(fsPathsArray, callback);
+    });
+}
+
+function addMultipleFiles() {
+    promptForKeySSI((keySSI) => {
+        const fsPathsArray = [];
+        promptAddFile(fsPathsArray, (fsPathsArray) => {
+            if (fsPathsArray.length === 0) {
+                console.log('No files to add.');
+                return prompt();
+            }
+
+            rl.question('Enter path (DSU): ', (dsuPath => {
+                resolver.loadDSU(keySSI, (err, dsuInstance) => {
+                    if (err) {
+                        console.error('Error loading DSU:', err);
+                        return prompt();
+                    }
+
+                    dsuInstance.addFiles(fsPathsArray, dsuPath, {}, (err) => {
+                        if (err) {
+                            console.error('Error adding files:', err);
+                            return prompt();
+                        }
+
+                        console.log('Files added successfully.')
+                        prompt();
+                    });
+                });
+            }));
+        });
+    });
+}
+
+function addFolder() {
+    promptForKeySSI((keySSI) => {
+        rl.question('Enter folder path (file system): ', (fsPath) => {
+            rl.question('Enter path (DSU): ', (dsuPath => {
+                resolver.loadDSU(keySSI, (err, dsuInstance) => {
+                    if (err) {
+                        console.error('Error loading DSU:', err);
+                        return prompt();
+                    }
+
+                    dsuInstance.addFolder(fsPath, dsuPath, {}, (err) => {
+                        if (err) {
+                            console.error('Error adding folder:', err);
+                            return prompt();
+                        }
+
+                        console.log('Folder added successfully.')
+                        prompt();
+                    });
+                });
+            }));
+        });
+    });
+}
+
+function extractFile() {
+    promptForKeySSI((keySSI) => {
+        rl.question('Enter path (file system): ', (fsPath) => {
+            rl.question('Enter file path (DSU): ', (dsuPath => {
+                resolver.loadDSU(keySSI, (err, dsuInstance) => {
+                    if (err) {
+                        console.error('Error loading DSU:', err);
+                        return prompt();
+                    }
+
+                    dsuInstance.extractFile(fsPath, dsuPath, {}, (err) => {
+                        if (err) {
+                            console.error('Error extracting file:', err);
+                            return prompt();
+                        }
+
+                        console.log('File extracted successfully.')
+                        prompt();
+                    });
+                });
+            }));
+        });
+    });
+}
+
+// TODO: fix
+function extractFolder() {
+    promptForKeySSI((keySSI) => {
+        rl.question('Enter path (file system): ', (fsPath) => {
+            rl.question('Enter folder path (DSU): ', (dsuPath => {
+                resolver.loadDSU(keySSI, (err, dsuInstance) => {
+                    if (err) {
+                        console.error('Error loading DSU:', err);
+                        return prompt();
+                    }
+
+                    dsuInstance.extractFolder(fsPath, dsuPath, {}, (err) => {
+                        if (err) {
+                            console.error('Error extracting folder:', err);
+                            return prompt();
+                        }
+
+                        console.log('Folder extracted successfully.')
+                        prompt();
+                    });
+                });
+            }));
+        });
+    });
+}
+
 function showHelp() {
     console.log('Available commands:');
     console.log('  create-dsu      - Create a new DSU with a file');
@@ -425,7 +572,7 @@ function showHelp() {
     console.log('  create-new-dsu  - Create a new DSU inside the current one');
     console.log('  receive-dsu     - Receive a DSU inside the current one');
     console.log('  remove-dsu      - Removes (unmounts) a DSU inside the current one');
-    console.log('  list            - List all contents of a DSU');
+    console.log('  ls              - List all contents of a DSU');
 
     console.log('  cat             - Display the content of a file in a DSU');
     console.log('  read-dir        - Display the contents of a directory in a DSU');
@@ -433,6 +580,12 @@ function showHelp() {
     console.log('  write-file      - Writes the content to a file in a DSU');
     console.log('  rm              - Deletes a file or folder in a DSU');
     console.log('  mv              - Renames a file or folder in a DSU');
+
+    console.log('  add-file        - Copies a file from the file system to the DSU');
+    console.log('  add-files       - Copies multiple files from the file system to the DSU');
+    console.log('  add-folder      - Copies a folder from the file system to the DSU');
+    console.log('  extract-file    - Restores a file from the DSU to the file system');
+    console.log('  extract-folder  - Restores a folder from the DSU to the file system');
 
     console.log('  clear-keyssi    - Clear the current DSU KeySSI');
     console.log('  help            - Show this help message');
