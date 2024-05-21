@@ -16,6 +16,8 @@ let currentKeySSI = null;
 let clearKeySSITimer = null;
 const keySSITimeout = 300000; // 5 minutes
 
+let currentDirectory = "";
+
 const commands = {
     'create-dsu': createDSU,
     'create-file': createFile,
@@ -36,6 +38,8 @@ const commands = {
     'add-folder': addFolder,
     'extract-file': extractFile,
     'extract-folder': extractFolder,
+    'cd': changeDirectory,
+    'pwd': printWorkingDirectory,
     'help': showHelp,
     'exit': () => rl.close()
 };
@@ -143,7 +147,7 @@ function createFolder() {
     });
 }
 
-// TODO: correctly check for directory/DSU and show accordingly
+// TODO: correctly check for directory/DSU and show accordingly --- is maybe fixed?
 function listContents() {
     promptForKeySSI((keySSI) => {
         resolver.loadDSU(keySSI, (err, dsuInstance) => {
@@ -152,19 +156,19 @@ function listContents() {
                 return prompt();
             }
 
-            dsuInstance.listFiles('/', (err, files) => {
+            dsuInstance.listFiles(currentDirectory, (err, files) => {
                 if (err) {
                     console.error('Error listing files:', err);
                     return prompt();
                 }
                 
-                dsuInstance.listFolders('/', {ignoreMounts: true}, (err, folders) => {
+                dsuInstance.listFolders(currentDirectory, {ignoreMounts: true}, (err, folders) => {
                     if (err) {
                         console.error('Error listing folders:', err);
                         return prompt();
                     }
 
-                    dsuInstance.listFolders('/', {ignoreMounts: false}, (err, foldersAndMounts) => {
+                    dsuInstance.listMountedDossiers(currentDirectory, (err, mounts) => {
                         if (err) {
                             console.error('Error listing folders and mounts:', err);
                             return prompt();
@@ -172,9 +176,9 @@ function listContents() {
 
                         console.log('Contents of DSU:');
                         files.forEach(file => console.log(file + ' ... file'));
-                        folders.forEach(folder => console.log(folder + '... directory'));
-                        const mounts = foldersAndMounts.filter((folderOrMount) => !folders.includes(folderOrMount));
-                        mounts.forEach(mount => console.log(mount + ' ... DSU'));
+                        const foldersWithoutMounts = folders.filter(folder => !mounts.map(mount => mount.path).includes(folder))
+                        foldersWithoutMounts.forEach(folder => console.log(folder + '... directory'));
+                        mounts.forEach(mount => console.log(mount.path + ' ... DSU'));
                         prompt();
                     });
                 });
@@ -206,6 +210,7 @@ function readFile() {
     });
 }
 
+// TODO: also fix
 function createNewDSU() {
     promptForKeySSI((keySSI) => {
         rl.question('Enter mounting point (DSU name): ', (mountingPoint) => {
@@ -229,7 +234,7 @@ function createNewDSU() {
                             return prompt();
                         }
     
-                        currentDSUInstance.mount(mountingPoint, templateSSI, {}, (err) => {
+                        currentDSUInstance.mount(mountingPoint, templateSSI, {persist: true}, (err) => {
                             if (err) {
                                 console.error('Error mounting DSU:', err);
                                 return prompt();
@@ -245,10 +250,10 @@ function createNewDSU() {
     });
 }
 
-
+// TODO: fix (mounting does not work)
 function receiveDSU() {
     promptForKeySSI((keySSI) => {
-        rl.question('Enter mounting point (DSU name): ', (mountingPoint) => {
+        rl.question('Enter mounting point (DSU name) --- must be an empty folder in the DSU: ', (mountingPoint) => {
             rl.question('Enter other DSU KeySSI: ', (otherKeySSI) => {
                 resolver.loadDSU(keySSI, (err, currentDSUInstance) => {
                     if (err) {
@@ -256,22 +261,15 @@ function receiveDSU() {
                         return prompt();
                     }
     
-                    currentDSUInstance.createFolder(mountingPoint, (err) => {
+                    currentDSUInstance.mount(mountingPoint, otherKeySSI, {persist: true}, (err) => {
                         if (err) {
-                            console.error('Error creating folder:', err);
+                            console.error('Error mounting DSU:', err);
                             return prompt();
                         }
-    
-                        currentDSUInstance.mount(mountingPoint, otherKeySSI, {}, (err) => {
-                            if (err) {
-                                console.error('Error mounting DSU:', err);
-                                return prompt();
-                            }
-                            console.log('DSU mounted successfully.');
-                            prompt();
-                        });
+                        console.log('DSU mounted successfully.');
                         prompt();
                     });
+                    prompt();
                 });
             });
         });
@@ -288,7 +286,7 @@ function removeDSU() {
                     return prompt();
                 }
 
-                currentDSUInstance.unmount(mountingPoint, {}, (err) => {
+                currentDSUInstance.unmount(mountingPoint, (err) => {
                     if (err) {
                         console.error('Error unmounting DSU:', err);
                         return prompt();
@@ -563,6 +561,19 @@ function extractFolder() {
     });
 }
 
+function changeDirectory() {
+    rl.question('Enter folder/DSU path (DSU) --- leave empty to go to root: ', (dsuPath => {
+        currentDirectory = dsuPath;
+        console.log("Change directory successful.");
+        prompt();
+    }));
+}
+
+function printWorkingDirectory() {
+    console.log(`Current working directory: ${currentDirectory}`);
+    prompt();
+}
+
 function showHelp() {
     console.log('Available commands:');
     console.log('  create-dsu      - Create a new DSU with a file');
@@ -586,6 +597,9 @@ function showHelp() {
     console.log('  add-folder      - Copies a folder from the file system to the DSU');
     console.log('  extract-file    - Restores a file from the DSU to the file system');
     console.log('  extract-folder  - Restores a folder from the DSU to the file system');
+
+    console.log('  cd              - Changes the current working directory (for ls purposes)');
+    console.log('  pwd             - Display the current working directory (for ls purposes)');
 
     console.log('  clear-keyssi    - Clear the current DSU KeySSI');
     console.log('  help            - Show this help message');
